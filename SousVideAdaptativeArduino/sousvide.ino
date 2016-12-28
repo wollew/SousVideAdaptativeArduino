@@ -101,10 +101,6 @@
 
 // ------------------------- DEFINITIONS & INITIALISATIONS
 
-// buttons
-int sw_tempMore;
-int sw_tempLess;
-
 // temperatures
 double environmentTemp = 0;
 double currentTemp = 0;
@@ -201,12 +197,6 @@ void setup() {
      */
     currentTemp =  sensors.getTempC(tempProbeAddress);
     targetTemp = (long) ((int)currentTemp);
-
-    /*
-       Write initial values to display
-     */
-    displayActualTemp(currentTemp);
-    displayTargetTemp(targetTemp);
 
     //prepare Relay port for writing
     pinMode(RELAY_OUT_PIN, OUTPUT);
@@ -1179,22 +1169,6 @@ void shutdownDevice()
         delay(30000);
     }
 }
-
-void readButtonInputs()
-{
-    // read buttons
-    // sw_tempMore = digitalRead(BT_TEMP_MORE_PIN);
-    // sw_tempLess = digitalRead(BT_TEMP_LESS_PIN);
-
-
-    // process inputs
-    if (sw_tempMore == LOW) {
-        targetTemp= std::min(targetTemp + 0.5, MAX_TARGET_TEMP * 1.0);
-        if (targetTemp > currentTemp)    isWaitingForTempAlert = true;
-    }
-    if (sw_tempLess == LOW) targetTemp-=0.5;
-}
-
 
 void SetApproximatePulseDurationsForREgulation(double tempLost, unsigned long regDelay )
 {
