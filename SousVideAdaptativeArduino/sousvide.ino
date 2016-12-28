@@ -210,6 +210,7 @@ void setup() {
     opState = INITIAL_WAIT;
 
     wifiManager.autoConnect("sous-vide");
+    setupWeb();
 
     delay(3000);
 }
@@ -400,15 +401,15 @@ void loop() {
         }
     }
 
-    // read buttons state
-    readButtonInputs();
-
     // update displays
     displayActualTemp(currentTemp);
     displayTargetTemp(targetTemp);
 
     // pause loop
     delay(delaytime);
+
+    // handle web request
+    server.handleClient();
 }
 
 
