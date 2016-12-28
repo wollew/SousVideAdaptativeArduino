@@ -1,5 +1,3 @@
-#include <Arduino.h>
-
 /*
 *
 *  SousVideWith8SegmentDisplays
@@ -9,6 +7,7 @@
 *  See http://www.instructables.com/id/Cheap-and-effective-Sous-Vide-cooker-Arduino-power/ for more info
 *
 *  Author : Etienne Giust - 2013, 2014
+ *  Author : Wolfgang Miller-Reichling - 2017
 *
 *  Features
 *
@@ -46,59 +45,43 @@
 
 // ------------------------- PARTS NEEDED
 
-// Arduino board
-// integrated 8 digits led display with MAX7219 control module (3 wire interface) 
-// Pushbutton x 2
-// Piezo element 
 // Waterproof DS18B20 Digital temperature sensor
 // 4.7K ohm resistor 
-// 5V Relay module for Arduino, capable to drive AC125/250V at 10A
 // Rice Cooker
 
 // ------------------------- PIN LAYOUT
 //
 // inputs
-// Pushbutton + on pin 6 with INPUT_PULLUP mode
-// Pushbutton - on pin 5 with INPUT_PULLUP mode
 // Temperature sensor on pin 9 (data pin of OneWire sensor)
 
 // outputs
-// Relay on pin 8
-// Speaker (piezo) on pin 13
-// 8 digit LED display  DataIn on pin 12 
-// 8 digit LED display  CLK on pin 11 
-// 8 digit LED display  LOAD on pin 10 
-
+// Relay on pin 12
+// LED on pin 13
 
 // ------------------------- LIBRARIES
-#include <LedControl.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+// Wifi
+#include <ESP8266WiFi.h>          //ESP8266 Core WiFi Library (you most likely already have this in your sketch)
+
+#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
+#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 
 // ------------------------- CONSTANTS
 
-// 8 segment display drivers
-#define TEMP_DISPLAY_DRIVER 0
-#define DISPLAY_LEFT 4  //left 4 digits of display
-#define DISPLAY_RIGHT 0  //right 4 digits of display
-#define REVERSE_DISPLAY 0 //set to 7 if your displays first digit is on the left
-
-// push-buttons
-#define BT_TEMP_MORE_PIN 6 //INPUT_PULLUP mode
-#define BT_TEMP_LESS_PIN 5 //INPUT_PULLUP mode
-
-// piezo
-#define PIEZO_PIN 13
+// LED
+#define LED_PIN 13
 
 // temperature sensor
-#define ONE_WIRE_BUS 9
+#define ONE_WIRE_BUS 14
 #define TEMPERATURE_PRECISION 9
 #define SAMPLE_DELAY 5000
 #define OUTPUT_TO_SERIAL true
 
 // relay
-#define RELAY_OUT_PIN 8
+#define RELAY_OUT_PIN 12
 
 
 // First Ramp
@@ -189,40 +172,20 @@ unsigned long  tCheckNotHeatingWildly;
 
 
 
-// 7-segment and sensor variables
-
-/*
- LedControl :
- pin 12 is connected to the DataIn 
- pin 11 is connected to the CLK 
- pin 10 is connected to LOAD 
- We have 1 MAX7219.
-*/
-LedControl lc=LedControl(12,11,10,1);
 // Set up a oneWire instance and Dallas temperature sensor
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);	
 // variable to store temperature probe address
 DeviceAddress tempProbeAddress; 
 
+WiFiManager wifiManager;
 
 // ------------------------- SETUP
 
 void setup() {
 
 	Serial.begin(9600); 
-	/*
-	Initialize MAX7219 display driver
-	*/
-	  lc.shutdown(0,false);
-	  lc.setIntensity(0,2);
-	  lc.clearDisplay(0);
 
-	/*
-	Initialize pushButtons
-	*/
-	pinMode(BT_TEMP_MORE_PIN, INPUT_PULLUP);
-	pinMode(BT_TEMP_LESS_PIN, INPUT_PULLUP);
 	/*
 	Initialize temperature sensor
 	*/
@@ -254,6 +217,8 @@ void setup() {
 	// Initial State  
 	warningsBeforeCounterFall = 3;
 	opState = INITIAL_WAIT;
+
+    wifiManager.autoConnect("sous-vide");
 
 	delay(3000);
 }
@@ -287,7 +252,7 @@ void loop() {
 			if (environmentTemp == 0)
 			{				
 				// store initial temp, but not more than 30 degrees
-				environmentTemp = min(actualTemp, 30);			
+                    environmentTemp = std::min(actualTemp, 30.0);			
 			}
 			// check if target temp is in acceptable range and switch to first ramp if so
 			if(targetTemp >= MIN_TARGET_TEMP)
@@ -884,7 +849,7 @@ double HeatingTimeNeeded(double degreeOffset)
 		secondPerDegreeGain = secondPerDegreeGainSmall;
 		boostType = LOWBOOST;
 	}
-	return max(degreeOffset * secondPerDegreeGain * 1000, MIN_SWITCHING_TIME) + burnupTime;
+    return std::max(degreeOffset * secondPerDegreeGain * 1000, MIN_SWITCHING_TIME * 1.0)  + burnupTime;
 }
 
 void HeatForDegrees(double degrees)
@@ -1201,7 +1166,7 @@ void checkShutdownConditions(){
 
 void shutdownDevice() 
 {
-    eraseDisplay();
+    // eraseDisplay();
 	displayActualTemp(0);
 	displayTargetTemp(0);
 
@@ -1220,13 +1185,13 @@ void shutdownDevice()
 void readButtonInputs()
 { 
   // read buttons
-  sw_tempMore = digitalRead(BT_TEMP_MORE_PIN);
-  sw_tempLess = digitalRead(BT_TEMP_LESS_PIN);
+    // sw_tempMore = digitalRead(BT_TEMP_MORE_PIN);
+    // sw_tempLess = digitalRead(BT_TEMP_LESS_PIN);
 
   
   // process inputs
   if (sw_tempMore == LOW) { 
-    targetTemp= min(targetTemp + 0.5, MAX_TARGET_TEMP);    
+        targetTemp= std::min(targetTemp + 0.5, MAX_TARGET_TEMP * 1.0);    
     if (targetTemp > actualTemp)    isWaitingForTempAlert = true;
   }
   if (sw_tempLess == LOW) targetTemp-=0.5; 
@@ -1360,96 +1325,6 @@ bool IsAcceleratingFall()
 }
 
 
-// ------------------------- 7-SEGMENT UTILITIES
-
-void printNumber(int wholePart, int decimalPart, boolean showDecimal, int displayAddress, int displaySide, boolean forceLowerRight) {
-    int ones;
-    int tens;
-    int hundreds;
-    int tenths;
-    int n = wholePart;  
-    // Erase and exit if wholePart does not fit
-    if (wholePart > 999) {
-        eraseDisplay(displayAddress, displaySide);
-        return;
-    }  
-      
-    // Manage ShowDecimal Case 
-    if (showDecimal && decimalPart < 10){
-      tenths = decimalPart;        
-    } else {
-      showDecimal = false;
-    }
-      
-    // Compute individual digits
-    ones= (int) (n%10);
-    n=n/10;
-    tens= (int) (n%10);
-    n=n/10;
-    hundreds= (int) n;			
-    
-    
-    // Print the number digit by digit (do not print leading zeroes)
-    if (showDecimal)
-    {
-      // ex : 153.2
-      if (wholePart > 99)     {
-        lc.setDigit(displayAddress,abs(REVERSE_DISPLAY-(displaySide+3)),(byte)hundreds,false);
-      } else {
-        eraseDigit(displayAddress,displaySide,3);
-      }
-      if (wholePart > 9)      
-      { 
-        lc.setDigit(displayAddress,abs(REVERSE_DISPLAY-(displaySide+2)),(byte)tens,false);
-      }else {
-        eraseDigit(displayAddress,displaySide,2);
-      }      
-      lc.setDigit(displayAddress,abs(REVERSE_DISPLAY-(displaySide+1)),(byte)ones,true);
-      lc.setDigit(displayAddress,abs(REVERSE_DISPLAY-displaySide),(byte)tenths,forceLowerRight);
-    } 
-    else
-    { 
-      // ex :  946
-      lc.setDigit(displayAddress,abs(REVERSE_DISPLAY-(displaySide+3)),' ',false);
-      if (wholePart > 99)     {
-        lc.setDigit(displayAddress,abs(REVERSE_DISPLAY-(displaySide+2)),(byte)hundreds,false);
-      } else {   
-        eraseDigit(displayAddress,displaySide,2);
-      }
-      if (wholePart > 9)      {
-        lc.setDigit(displayAddress,abs(REVERSE_DISPLAY-(displaySide+1)),(byte)tens,false);
-      } else {
-        eraseDigit(displayAddress,displaySide,1);
-      }
-      lc.setDigit(displayAddress,abs(REVERSE_DISPLAY-displaySide),(byte)ones,forceLowerRight);
-    }
-}
-
-void eraseDigit(int displayAddress, int displaySide, int digitIndex) {
-    lc.setChar(displayAddress,abs(REVERSE_DISPLAY-(displaySide+digitIndex)),' ',false);
-}
-
-void eraseDisplay(int displayAddress, int displaySide) {       
-    // Erase the 4-digit
-    eraseDigit(displayAddress,displaySide,0);
-    eraseDigit(displayAddress,displaySide,1);
-    eraseDigit(displayAddress,displaySide,2);
-    eraseDigit(displayAddress,displaySide,3);
-}
-
-void eraseDisplay(int displayAddress) {       
-    // Erase the 2 sides of display
-    eraseDisplay(displayAddress, DISPLAY_LEFT);
-    eraseDisplay(displayAddress, DISPLAY_RIGHT);
-}
-
-void eraseDisplay() {       
-    // Erase all displays
-    for(int index=0;index<lc.getDeviceCount();index++) {
-      eraseDisplay(index);
-    }
-}
-
 void displayTemp(float temp, int side)
 { 
   boolean showDecimal = true;
@@ -1461,16 +1336,16 @@ void displayTemp(float temp, int side)
   if (hundredths > 5) 
   tenths = tenths + 1 ; // round to closest digit
   
-  printNumber((int) temp, tenths, showDecimal, TEMP_DISPLAY_DRIVER, side, false);
+    // printNumber((int) temp, tenths, showDecimal, TEMP_DISPLAY_DRIVER, side, false);
 }
 
 void displayActualTemp(float temp)
 {
-  displayTemp(temp, DISPLAY_LEFT);
+    // displayTemp(temp, DISPLAY_LEFT);
 }
 void displayTargetTemp(float temp)
 {
-  displayTemp(temp, DISPLAY_RIGHT);
+    // displayTemp(temp, DISPLAY_RIGHT);
 }
 
 
@@ -1478,12 +1353,7 @@ void displayTargetTemp(float temp)
 
 void soundAlarm()
 {
-  //Serial.println("ALERT");
-  for(int index=0;index<3;index++) {
-    tone(PIEZO_PIN, 650, 1000);
-    //Serial.println("BIIP");
-    delay(2000);
-  }  
+    Serial.println("ALERT");
 }
 
 void alertTemperatureNearlySet()
