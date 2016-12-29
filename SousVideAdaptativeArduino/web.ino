@@ -2,6 +2,7 @@
 void setupWeb() {
   server.on("/", handleRoot);
   server.on("/settemp", handleSettemp);
+  server.on("/getcurrenttemp", handleGetCurrent);
   server.onNotFound(handleNotFound);
 }
 
@@ -14,6 +15,11 @@ void handleRoot() {
   content += "Relay status: ";
   content += (digitalRead(RELAY_OUT_PIN) == LOW) ? "ON" : "OFF";
   content += "<br>";
+  content += "<form action=\"/settemp\">";
+  content += "New target temperature: <br>";
+  content += "<input type=\"text\" name=\"targetTemp\" value=\"\"><br>";
+  content += " <input type=\"submit\" value=\"Submit\"></form>";
+
 
   content += "</body></html>";
 
@@ -27,8 +33,16 @@ void handleSettemp() {
     float t = targettemp.toFloat();
     if (t >= MIN_TARGET_TEMP && t <= MAX_TARGET_TEMP) {
       targetTemp = t;
+      String content = "new target temperature = " + String(t);
+      server.send(200, "text/plain", content);
+    } else {
+      server.send(200, "text/plain", "invalid post value " + targettemp);
     }
   }
+}
+
+void handleGetCurrent() {
+  server.send(200, "text/plain", String(currentTemp));
 }
 
 void handleNotFound() {
