@@ -2,15 +2,33 @@
 void setupWeb() {
   server.on("/", handleRoot);
   server.on("/settemp", handleSettemp);
-  server.on("/getcurrenttemp", handleGetCurrent);
+  server.on("/currenttemp", handleGetCurrent);
   server.onNotFound(handleNotFound);
 }
 
 
 void handleRoot() {
-  String content = "<html><body><H2>Welcome to your ESP8266 Sous-Vide Cooker!</H2><br>";
+  String content = "<html><head>"
+  "<script type=\"text/javascript\">"
+  "function refresh() {"
+	"var req = new XMLHttpRequest();"
+	"console.log(\"getting current temp\");"
+	"req.onreadystatechange=function() {"
+			"if (req.readyState==4 && req.status==200) {"
+				"document.getElementById('currentTemp').innerText = req.responseText;"
+			"}"
+	"}"
+	"req.open(\"GET\", '/currenttemp', true);"
+	"req.send(null);"
+  "}"
+ "function init() { "
+	   "var int=self.setInterval(function(){refresh()},30000); "
+ "}"
+ "</script></head><body onload=\"init()\"><H2>Welcome to your ESP8266 Sous-Vide Cooker!</H2><br>";
 
-  content += "Current Temperature: " + String(currentTemp) + "<br>";
+  content += "<div style=\"display: inline-block\">Current Temperature: </div>"
+  "&nbsp;<div style=\"display: inline-block\" id=\"currentTemp\">";
+  content += String(currentTemp) + "</div><br>";
   content += "Target Temperature: " + String(targetTemp) + "<br>";
   content += "Relay status: ";
   content += (digitalRead(RELAY_OUT_PIN) == LOW) ? "ON" : "OFF";
