@@ -1,5 +1,7 @@
 
 void setupWeb() {
+  server.begin();
+
   server.on("/", handleRoot);
   server.on("/settemp", handleSettemp);
   server.on("/currenttemp", handleGetCurrent);

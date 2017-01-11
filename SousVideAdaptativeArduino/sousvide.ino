@@ -184,17 +184,17 @@ ESP8266WebServer server ( 80 );
 
 void setup() {
 
-    Serial.begin(9600);
+    Serial.begin(115200);
 
     /*
        Initialize temperature sensor
      */
     sensors.begin();
-    delay(1000);
+    delay(100);
     sensors.getAddress(tempProbeAddress, 0);
-    delay(1000);
+    delay(100);
     sensors.requestTemperaturesByIndex(0); // Send the command to get temperatures
-    delay(1000);
+    delay(100);
     /*
        Read temperature
      */
@@ -582,7 +582,7 @@ void PerformRegulationCalculations()
 
         Serial.print(" --- avgTemp3 = ");
         Serial.print(averageTemp3, DEC);
-        Serial.print(" --- maxRegTEmp = ");
+        Serial.print(" --- maxRegTemp = ");
         Serial.print(maxRegTEmp, DEC);
         Serial.print(" --- minRegTEmp = ");
         Serial.print(minRegTEmp, DEC);
@@ -731,7 +731,7 @@ void GetTemperatureAndEnforceSecurity()
             opState = TEMP_DROP;
             tempBeforeDrop = tempPreviousArray[0];
             waitForSuddenRise = false;
-            Serial.println("REMOVED TEMP PROBE!");
+            Serial.println("REMOVED TEMP PROBE!!!");
 
             if (tStartBoostTemp - millis() <= 3 * SAMPLE_DELAY)
             {
