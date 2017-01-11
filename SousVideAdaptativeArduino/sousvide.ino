@@ -194,16 +194,16 @@ void setup() {
        Initialize temperature sensor
      */
     sensors.begin();
-    delay(100);
+    delay(1000);
     sensors.getAddress(tempProbeAddress, 0);
-    delay(100);
+    delay(1000);
     sensors.requestTemperaturesByIndex(0); // Send the command to get temperatures
-    delay(100);
+    delay(1000);
     /*
        Read temperature
      */
     currentTemp =  sensors.getTempC(tempProbeAddress);
-    targetTemp = (long) ((int)currentTemp);
+    targetTemp = currentTemp;
 
     //prepare Relay port for writing
     pinMode(RELAY_OUT_PIN, OUTPUT);
@@ -512,7 +512,7 @@ void Regulate()
             tBackToHigh = millis() + durationOffPulse;
             Serial.print("durationOffPulse = ");
             Serial.print(durationOffPulse);
-            Serial.print("durationOnPulse = ");
+            Serial.print("   durationOnPulse = ");
             Serial.println(durationOnPulse);
 
 
@@ -794,9 +794,13 @@ void GetTemperatureAndEnforceSecurity()
         tempPreviousArrayPushValue(currentTemp);
         isNewSample = true;
         if (OUTPUT_TO_SERIAL) {
+            Serial.print("time=");
             Serial.print(tcurrent/1000, DEC);
-            Serial.print(";  ");
-            Serial.println(currentTemp, 3);
+            Serial.print("s  currentTemp=");
+            Serial.print(currentTemp, 3);
+            Serial.print("deg  targetTemp=");
+            Serial.print(targetTemp, 1);
+            Serial.println("deg)");
         }
         if (currentTemp > targetTemp + 0.15)
         {
@@ -1133,7 +1137,7 @@ void turnOnRelay()
     digitalWrite(RELAY_OUT_PIN,HIGH);
     digitalWrite(LED_PIN , HIGH);
     tCheckNotHeatingWildly = millis() + ((unsigned long)60000 * MAX_HEATINGTIME_NO_TEMP_CHANGE_MINUTES);
-    Serial.println("tCheckNotHeatingWildly =");
+    Serial.println("tCheckNotHeatingWildly = ");
     Serial.println(tCheckNotHeatingWildly, DEC);
     tempBeforeHeating = currentTemp;
     isHeatOn = true;
