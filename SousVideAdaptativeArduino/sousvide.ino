@@ -72,6 +72,8 @@
 #include <WiFiUdp.h>
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 
+// #include <RemoteDebug.h>
+
 // ------------------------- CONSTANTS
 
 // LED
@@ -179,6 +181,8 @@ DeviceAddress tempProbeAddress;
 
 WiFiManager wifiManager;
 ESP8266WebServer server ( 80 );
+
+// RemoteDebug Debug;
 
 // ------------------------- SETUP
 
