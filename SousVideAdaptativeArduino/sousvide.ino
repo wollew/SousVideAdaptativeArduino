@@ -1131,6 +1131,7 @@ void turnOnRelay()
 {
     Serial.println("HEAT ON !");
     digitalWrite(RELAY_OUT_PIN,HIGH);
+    digitalWrite(LED_PIN , HIGH);
     tCheckNotHeatingWildly = millis() + ((unsigned long)60000 * MAX_HEATINGTIME_NO_TEMP_CHANGE_MINUTES);
     Serial.println("tCheckNotHeatingWildly =");
     Serial.println(tCheckNotHeatingWildly, DEC);
@@ -1141,6 +1142,7 @@ void turnOnRelay()
 void turnOffRelay()
 {
     digitalWrite(RELAY_OUT_PIN,LOW);
+    digitalWrite(LED_PIN , LOW);
     tLastTurnOffRelay = millis();
     tCheckNotHeatingWildly = 0;
     isHeatOn = false;
