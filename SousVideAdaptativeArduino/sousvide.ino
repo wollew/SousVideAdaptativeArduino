@@ -138,7 +138,7 @@ boolean waitingForStabilization = false;
 boolean doBackToFirstRampWhenStabilizing = false;
 boolean isHeatOn = false;
 boolean isCounteracting = false;
-enum operatingState { INITIAL_WAIT = 0, TEMP_DROP, TEMP_RISE, FIRST_RAMP, BOOST_TEMP, COUNTER_FALL, WAIT_NATURAL_DROP, REGULATE};
+enum operatingState { INITIAL_WAIT = 0, TEMP_DROP, TEMP_RISE, FIRST_RAMP, BOOST_TEMP, COUNTER_FALL, WAIT_NATURAL_DROP, REGULATE, SHUTDOWN};
 operatingState opState = INITIAL_WAIT;
 enum boostTypes {HIGHBOOST = 0, LOWBOOST};
 boostTypes boostType = HIGHBOOST;
@@ -240,15 +240,18 @@ void loop() {
 
     tcurrent = millis();
 
-    // get temperature every few seconds and output it to serial if needed. Alert if we are within range
-    GetTemperatureAndEnforceSecurity();
-    // compute current temperatue Derivative
-    SetActualDerivative();
+    if (opState != SHUTDOWN) {
+      // get temperature every few seconds and output it to serial if needed. Alert if we are within range
+      GetTemperatureAndEnforceSecurity();
+      // compute current temperatue Derivative
+      SetActualDerivative();
+    }
 
 
     switch (opState)
     {
         case INITIAL_WAIT:
+            // Serial.print("opState="); Serial.println("INITIAL_WAIT");
             // wait for initial temperature stability
             if (abs(currentTemp - tempPreviousArray[1] ) < 0.1)
             {
@@ -266,6 +269,7 @@ void loop() {
             break;
 
         case TEMP_DROP:
+            // Serial.print("opState="); Serial.println("TEMP_DROP");
             // wait for stabilization or for sudden rise
             if (waitForSuddenRise == false && IsStabilizing())
             {
@@ -293,6 +297,7 @@ void loop() {
             break;
 
         case TEMP_RISE:
+            // Serial.print("opState="); Serial.println("TEMP_RISE");
             // wait for stabilization, then Regulate
             if ( IsStabilizingOrDropping() )
             {
@@ -311,10 +316,12 @@ void loop() {
             break;
 
         case FIRST_RAMP:
+            // Serial.print("opState="); Serial.println("FIRST_RAMP");
             PerformFirstRamp();
             break;
 
         case COUNTER_FALL:
+            // Serial.print("opState="); Serial.println("COUNTER_FALL");
             // START CONDITION : temp well below target && important negative derivative , but not freefall : -0.1 < d < -0.01,  3 times in a row
 
             // ON, until deriv == 0 then cut and wait stabilization
@@ -353,12 +360,14 @@ void loop() {
             }
             break;
         case BOOST_TEMP:
+            // Serial.print("opState="); Serial.println("BOOST_TEMP");
             PerformBoostTemp();
             WatchForTempFalling();
             break;
 
 
         case WAIT_NATURAL_DROP:
+            // Serial.print("opState="); Serial.println("WAIT_NATURAL_DROP");
             if (isNewSample)
             {
                 // when temp is close enough to target, try to calculate regulation values if they are not already set
@@ -399,8 +408,14 @@ void loop() {
             WatchForTempFalling();
             break;
         case REGULATE:
+            // Serial.print("opState="); Serial.println("REGULATE");
             Regulate();
             WatchForTempFalling();
+            break;
+        case SHUTDOWN:
+            digitalWrite(LED_PIN, HIGH);
+            delay(100);
+            digitalWrite(LED_PIN, LOW);
             break;
     }
 
@@ -1178,10 +1193,7 @@ void shutdownDevice()
     // turn off relay !
     digitalWrite(RELAY_OUT_PIN,LOW);
     isHeatOn = false;
-    while(1)
-    {
-        delay(30000);
-    }
+    opState = SHUTDOWN;
 }
 
 void SetApproximatePulseDurationsForREgulation(double tempLost, unsigned long regDelay )
