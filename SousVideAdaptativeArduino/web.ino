@@ -11,21 +11,21 @@ void setupWeb() {
 
 void handleRoot() {
   String content = "<html><head>"
-  "<script type=\"text/javascript\">"
-  "function refresh() {"
-	"var req = new XMLHttpRequest();"
-	"console.log(\"getting current temp\");"
-	"req.onreadystatechange=function() {"
-			"if (req.readyState==4 && req.status==200) {"
-				"document.getElementById('currentTemp').innerText = req.responseText;"
-			"}"
-	"}"
-	"req.open(\"GET\", '/currenttemp', true);"
-	"req.send(null);"
-  "}"
- "function init() { "
-	   "var int=self.setInterval(function(){refresh()},30000); "
- "}"
+  "<script type=\"text/javascript\">\n"
+  "function refresh() {\n"
+	"var req = new XMLHttpRequest();\n"
+	"console.log(\"getting current temp\");\n"
+	"req.onreadystatechange=function() {\n"
+			"if (req.readyState==4 && req.status==200) {\n"
+				"document.getElementById('currentTemp').innerText = req.responseText;\n"
+			"}\n"
+	"}\n"
+	"req.open(\"GET\", '/currenttemp', true);\n"
+	"req.send(null);\n"
+  "}\n"
+ "function init() { \n"
+	   "var int=self.setInterval(function(){refresh()},10000); \n"
+ "}\n"
  "</script></head><body onload=\"init()\"><H2>Welcome to your ESP8266 Sous-Vide Cooker!</H2><br>";
 
   content += "<div style=\"display: inline-block\">Current Temperature: </div>"
@@ -33,7 +33,7 @@ void handleRoot() {
   content += String(currentTemp) + "</div><br>";
   content += "Target Temperature: " + String(targetTemp) + "<br>";
   content += "Relay status: ";
-  content += (digitalRead(RELAY_OUT_PIN) == LOW) ? "ON" : "OFF";
+  content += isHeatOn ? "ON" : "OFF";
   content += "<br>";
   content += "<form action=\"/settemp\">";
   content += "New target temperature: <br>";
